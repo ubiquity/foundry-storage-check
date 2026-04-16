@@ -112,7 +112,10 @@ async function _run() {
       srcContent = zip.readAsText(entry);
     }
     core.endGroup();
-  } else throw Error(`No workflow run found with an artifact named "${baseReport}"`);
+  } else {
+    core.warning(`No previous artifact found for "${baseReport}". This is expected for newly added contracts. Skipping storage layout check.`);
+    return;
+  }
 
   core.info(`Mapping reference storage layout report`);
   const srcLayout = parseLayout(srcContent);
