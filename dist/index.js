@@ -364,6 +364,7 @@ const providers_1 = __nccwpck_require__(529);
 const check_1 = __nccwpck_require__(7657);
 const format_1 = __nccwpck_require__(6610);
 const input_1 = __nccwpck_require__(8657);
+const report_path_1 = __nccwpck_require__(4691);
 const types_1 = __nccwpck_require__(8164);
 const token = process.env.GITHUB_TOKEN || core.getInput("token");
 const baseBranch = core.getInput("base");
@@ -375,10 +376,8 @@ const failOnRemoval = core.getInput("failOnRemoval") === "true";
 const failOnLabelDiff = core.getInput("failOnLabelDiff") === "true";
 const workingDirectory = core.getInput("workingDirectory");
 const contractAbs = (0, path_1.join)(workingDirectory, contract);
-const contractEscaped = contractAbs.replace(/\//g, "_").replace(/:/g, "-");
-const getReportPath = (branch, baseName) => `${branch.replace(/[/\\]/g, "-")}.${baseName}.json`;
-const baseReport = getReportPath(baseBranch, contractEscaped);
-const outReport = getReportPath(headBranch, contractEscaped);
+const baseReport = (0, report_path_1.getReportPath)(baseBranch, contractAbs);
+const outReport = (0, report_path_1.getReportPath)(headBranch, contractAbs);
 const octokit = (0, github_1.getOctokit)(token);
 const artifactClient = artifact.create();
 const { owner, repo } = github_1.context.repo;
@@ -631,6 +630,48 @@ const parseSource = (contract) => {
     return { path, def, tokens };
 };
 exports.parseSource = parseSource;
+
+
+/***/ }),
+
+/***/ 4691:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.getReportPath = exports.sanitizeArtifactPart = void 0;
+const crypto_1 = __nccwpck_require__(6113);
+const MAX_ARTIFACT_NAME_LENGTH = 255;
+/**
+ * Converts a branch or contract path into the portable subset accepted by
+ * GitHub Actions artifact names.
+ */
+function sanitizeArtifactPart(value) {
+    const sanitized = value
+        .replace(/[\\/]/g, "-")
+        .replace(/[^a-zA-Z0-9._-]/g, "-")
+        .replace(/-+/g, "-")
+        .replace(/^[-.]+|[-.]+$/g, "");
+    return sanitized || "artifact";
+}
+exports.sanitizeArtifactPart = sanitizeArtifactPart;
+/**
+ * Builds a stable, bounded artifact name for a contract report.
+ *
+ * The readable contract path is retained for diagnostics while a short hash
+ * keeps similarly named contracts distinct after sanitization/truncation.
+ */
+function getReportPath(branch, contractPath) {
+    const branchPart = sanitizeArtifactPart(branch);
+    const contractPart = sanitizeArtifactPart(contractPath);
+    const contractHash = (0, crypto_1.createHash)("sha256").update(contractPath).digest("hex").slice(0, 12);
+    const suffix = `-${contractHash}.json`;
+    const prefix = `${branchPart}.${contractPart}`;
+    const availablePrefixLength = Math.max(1, MAX_ARTIFACT_NAME_LENGTH - suffix.length);
+    return `${prefix.slice(0, availablePrefixLength)}${suffix}`;
+}
+exports.getReportPath = getReportPath;
 
 
 /***/ }),
