@@ -10,6 +10,7 @@ import { getDefaultProvider } from "@ethersproject/providers";
 import { checkLayouts } from "./check";
 import { diffLevels, diffTitles, formatDiff } from "./format";
 import { createLayout, parseSource, parseLayout } from "./input";
+import { getReportPath } from "./report-path";
 import { StorageLayoutDiffType } from "./types";
 
 const token = process.env.GITHUB_TOKEN || core.getInput("token");
@@ -23,12 +24,8 @@ const failOnLabelDiff = core.getInput("failOnLabelDiff") === "true";
 const workingDirectory = core.getInput("workingDirectory");
 
 const contractAbs = join(workingDirectory, contract);
-const contractEscaped = contractAbs.replace(/\//g, "_").replace(/:/g, "-");
-const getReportPath = (branch: string, baseName: string) =>
-  `${branch.replace(/[/\\]/g, "-")}.${baseName}.json`;
-
-const baseReport = getReportPath(baseBranch, contractEscaped);
-const outReport = getReportPath(headBranch, contractEscaped);
+const baseReport = getReportPath(baseBranch, contractAbs);
+const outReport = getReportPath(headBranch, contractAbs);
 
 const octokit = getOctokit(token);
 const artifactClient = artifact.create();
