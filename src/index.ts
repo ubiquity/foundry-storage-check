@@ -2,7 +2,7 @@ import Zip from "adm-zip";
 import * as fs from "fs";
 import { dirname, join, resolve } from "path";
 
-import * as artifact from "@actions/artifact";
+import { DefaultArtifactClient } from "@actions/artifact";
 import * as core from "@actions/core";
 import { context, getOctokit } from "@actions/github";
 import { getDefaultProvider } from "@ethersproject/providers";
@@ -31,7 +31,7 @@ const baseReport = getReportPath(baseBranch, contractEscaped);
 const outReport = getReportPath(headBranch, contractEscaped);
 
 const octokit = getOctokit(token);
-const artifactClient = artifact.create();
+const artifactClient = new DefaultArtifactClient();
 
 const { owner, repo } = context.repo;
 const repository = owner + "/" + repo;
@@ -53,16 +53,12 @@ async function _run() {
   fs.writeFileSync(localReportPath, cmpContent);
 
   core.startGroup(`Upload new report from "${localReportPath}" as artifact named "${outReport}"`);
-  const uploadResponse = await artifactClient.uploadArtifact(
-    outReport,
-    [localReportPath],
-    dirname(localReportPath),
-    { continueOnError: false }
-  );
+  // The artifact client rejects the returned promise on any upload failure, so a
+  // failed upload still fails the step. There is no partial-success result to inspect:
+  // v2+ returns only { size, id, digest } and no longer accepts `continueOnError`.
+  await artifactClient.uploadArtifact(outReport, [localReportPath], dirname(localReportPath));
 
-  if (uploadResponse.failedItems.length > 0) throw Error("Failed to upload storage layout report.");
-
-  core.info(`Artifact ${uploadResponse.artifactName} has been successfully uploaded!`);
+  core.info(`Artifact ${outReport} has been successfully uploaded!`);
   core.endGroup();
 
   if (context.eventName !== "pull_request") return;
