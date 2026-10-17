@@ -102,7 +102,7 @@ export const createLayout = (contract: string, cwd = ".") => {
     }
   };
 
-  const sl : string = execSync(quote(["forge", "inspect", contract, "storage-layout"]), {
+  const sl : string = execSync(quote(["forge", "inspect", contract, "storage-layout", "--json"]), {
       encoding: "utf-8",
       cwd,
   });
